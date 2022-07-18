@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -e
+set -ex
 
 if [ -z "$AWS_S3_BUCKET" ]; then
   echo "AWS_S3_BUCKET is not set. Quitting."
@@ -14,6 +14,24 @@ fi
 
 if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
   echo "AWS_SECRET_ACCESS_KEY is not set. Quitting."
+  exit 1
+fi
+
+
+if [ -z "$DEST_DIR" ]; then
+  echo "DEST_DIR is not set. Quitting."
+  exit 1
+fi
+
+
+if [ -z "$SOURCE_DIR" ]; then
+  echo "SOURCE_DIR is not set. Quitting."
+  exit 1
+fi
+
+
+if [ -z "$AWS_CLOUDFRONT_DISTRIBUTION_ID" ]; then
+  echo "AWS_CLOUDFRONT_DISTRIBUTION_ID is not set. Quitting."
   exit 1
 fi
 
@@ -42,7 +60,9 @@ EOF
 sh -c "aws s3 sync ${SOURCE_DIR:-.} s3://${AWS_S3_BUCKET}/${DEST_DIR} \
               --profile s3-sync-action \
               --no-progress \
-              ${ENDPOINT_APPEND} $*"
+              ${ENDPOINT_APPEND} $* "
+# invalidate cloudfront distribution
+sh -c "aws cloudfront create-invalidation --distribution-id ${AWS_CLOUDFRONT_DISTRIBUTION_ID} --paths \"/index.html\""
 
 # Clear out credentials after we're done.
 # We need to re-run `aws configure` with bogus input instead of
